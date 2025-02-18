@@ -1,0 +1,96 @@
+using Microsoft.AspNetCore.Mvc;
+using {{ namespace }}.Utility;
+
+namespace {{ namespace }}.Controllers
+{
+    [ApiController]
+    [Route("[controller]")]
+    public class {{ controllername }}Controller : ControllerBase
+    {
+        private readonly ApiRequest _request;
+        private const string JsonContentType = "application/json";
+
+        public {{ controllername }}Controller(ApiRequest request)
+        {
+            _request = request;
+        }
+
+        {% if getmethods.size > 0 %}
+        // GET Methods
+        {% for method in getmethods %}
+        [HttpGet("{{ method.route }}")]
+        public async Task<IActionResult> {{ method.name }}(
+            {% if method.hasbody %}[FromBody] {{ method.parametertype }} model, {% endif %}
+            [FromHeader(Name = "Authorization")] string? authorization = null
+        )
+        {
+            var response = await _request.CallEndpointAsync(
+                HttpMethod.Get,
+                "/{{ controllername }}/{{ method.route }}",
+                authorization
+                {% if method.hasbody %}, model{% else %}, null{% endif %}
+            );
+            return Content(response, JsonContentType);
+        }
+        {% endfor %}
+        {% endif %}
+
+        {% if putmethods.size > 0 %}
+        // PUT Methods
+        {% for method in putmethods %}
+        [HttpPut("{{ method.route }}")]
+        public async Task<IActionResult> {{ method.name }}(
+            {% if method.hasbody %}[FromBody] {{ method.parametertype }} model, {% endif %}
+            [FromHeader(Name = "Authorization")] string? authorization = null
+        )
+        {
+            var response = await _request.CallEndpointAsync(
+                HttpMethod.Put,
+                "/{{ controllername }}/{{ method.route }}",
+                authorization
+                {% if method.hasbody %}, model{% else %}, null{% endif %}
+            );
+            return Content(response, JsonContentType);
+        }
+        {% endfor %}
+        {% endif %}
+
+        {% if postmethods.size > 0 %}
+        // POST Methods
+        {% for method in postmethods %}
+        [HttpPost("{{ method.route }}")]
+        public async Task<IActionResult> {{ method.name }}(
+            {% if method.hasbody %}[FromBody] {{ method.parametertype }} model, {% endif %}
+            [FromHeader(Name = "Authorization")] string? authorization = null
+        )
+        {
+            var response = await _request.CallEndpointAsync(
+                HttpMethod.Post,
+                "/{{ controllername }}/{{ method.route }}",
+                authorization
+                {% if method.hasbody %}, model{% else %}, null{% endif %}
+            );
+            return Content(response, JsonContentType);
+        }
+        {% endfor %}
+        {% endif %}
+
+        {% if deletemethods.size > 0 %}
+        // DELETE Methods
+        {% for method in deletemethods %}
+        [HttpDelete("{{ method.route }}")]
+        public async Task<IActionResult> {{ method.name }}(
+            [FromHeader(Name = "Authorization")] string? authorization = null
+        )
+        {
+            var response = await _request.CallEndpointAsync(
+                HttpMethod.Delete,
+                "/{{ controllername }}/{{ method.route }}",
+                authorization
+            );
+            return Content(response, JsonContentType);
+        }
+        {% endfor %}
+        {% endif %}
+    }
+}

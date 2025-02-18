@@ -1,0 +1,47 @@
+# .NET Core
+## User-specific files
+.idea/
+.vs/
+.vscode/
+
+# User-specific files for macOS and Windows
+.DS_Store
+Thumbs.db
+
+# Windows Installer files
+*.cab
+*.msi
+*.msm
+*.msp
+
+# .NET build output directories
+bin/
+obj/
+
+# Windows Installer files
+*.cab
+*.msi
+*.msm
+*.msp
+
+# .NET Core local tool configurations
+.tool/
+
+# ASP.NET Core
+# This folder contains user-specific data files
+wwwroot/
+
+# JetBrains Rider
+.idea/
+
+# Windows Installer files
+*.cab
+*.msi
+*.msm
+*.msp
+
+# User-specific files
+*.user
+*.userosscache
+*.suo
+*.userprefs

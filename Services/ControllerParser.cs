@@ -25,10 +25,7 @@ namespace ParentApiGenerator.Services
             {
                 string fullControllerName = controller.Identifier.Text;
                 string simpleControllerName = fullControllerName.EndsWith("Controller")
-                    ? fullControllerName.Substring(
-                        0,
-                        fullControllerName.Length - "Controller".Length
-                    )
+                    ? fullControllerName.Substring(0, fullControllerName.Length - "Controller".Length)
                     : fullControllerName;
 
                 var controllerModel = new Controller { ControllerName = simpleControllerName };
@@ -68,7 +65,7 @@ namespace ParentApiGenerator.Services
                 string route =
                     httpAttr?.ArgumentList?.Arguments.FirstOrDefault()?.ToString().Trim('"') ?? "";
 
-                // Check if the method has a body (from [FromBody] parameter)
+                // Check if the method has a body parameter (using [FromBody])
                 bool hasBody = method.ParameterList.Parameters.Any(p =>
                     p.AttributeLists.Any(attr => attr.ToString().Contains("FromBody"))
                 );
@@ -83,6 +80,16 @@ namespace ParentApiGenerator.Services
                     parameterType = bodyParam?.Type?.ToString() ?? string.Empty;
                 }
 
+                // Extract non-body parameters
+                var nonBodyParameters = method.ParameterList.Parameters
+                    .Where(p => !p.AttributeLists.Any(attr => attr.ToString().Contains("FromBody")))
+                    .Select(p => new Parameter
+                    {
+                        Type = p.Type?.ToString() ?? string.Empty,
+                        Name = p.Identifier.ToString()
+                    })
+                    .ToList();
+
                 // Create a method object and add it to the corresponding HTTP verb list in the controller
                 var methodObj = new Method
                 {
@@ -91,6 +98,7 @@ namespace ParentApiGenerator.Services
                     Route = route,
                     HasBody = hasBody,
                     ParameterType = parameterType,
+                    Parameters = nonBodyParameters
                 };
 
                 // Group methods by HTTP verb (Get, Put, Post, Delete)

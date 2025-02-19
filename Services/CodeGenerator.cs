@@ -46,7 +46,17 @@ namespace ParentApiGenerator.Services
                             { "route", gm.Route ?? string.Empty },
                             { "name", gm.Name ?? string.Empty },
                             { "hasbody", gm.HasBody },
-                            { "parametertype", gm.ParameterType ?? string.Empty }, // Handle nulls
+                            { "parametertype", gm.ParameterType ?? string.Empty },
+                            {
+                                "parameters",
+                                gm
+                                    .Parameters.Select(p => new Dictionary<string, object>
+                                    {
+                                        { "type", p.Type ?? string.Empty },
+                                        { "name", p.Name ?? string.Empty },
+                                    })
+                                    .ToList()
+                            },
                         })
                         .ToList(),
                     ["putmethods"] = controller
@@ -56,6 +66,16 @@ namespace ParentApiGenerator.Services
                             { "name", pm.Name ?? string.Empty },
                             { "hasbody", pm.HasBody },
                             { "parametertype", pm.ParameterType ?? string.Empty },
+                            {
+                                "parameters",
+                                pm
+                                    .Parameters.Select(p => new Dictionary<string, object>
+                                    {
+                                        { "type", p.Type ?? string.Empty },
+                                        { "name", p.Name ?? string.Empty },
+                                    })
+                                    .ToList()
+                            },
                         })
                         .ToList(),
                     ["postmethods"] = controller
@@ -65,6 +85,16 @@ namespace ParentApiGenerator.Services
                             { "name", pm.Name ?? string.Empty },
                             { "hasbody", pm.HasBody },
                             { "parametertype", pm.ParameterType ?? string.Empty },
+                            {
+                                "parameters",
+                                pm
+                                    .Parameters.Select(p => new Dictionary<string, object>
+                                    {
+                                        { "type", p.Type ?? string.Empty },
+                                        { "name", p.Name ?? string.Empty },
+                                    })
+                                    .ToList()
+                            },
                         })
                         .ToList(),
                     ["deletemethods"] = controller

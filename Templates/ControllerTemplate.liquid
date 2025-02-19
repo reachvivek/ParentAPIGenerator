@@ -20,27 +20,67 @@ namespace {{ namespace }}.Controllers
         {% for method in getmethods %}
         [HttpGet("{{ method.route }}")]
         public async Task<IActionResult> {{ method.name }}(
-            {% if method.hasbody %}[FromBody] {{ method.parametertype }} model, {% endif %}
+            {%- if method.parameters and method.parameters.size > 0 -%}
+                {%- for param in method.parameters -%}
+                    {{ param.type }} {{ param.name }}{% if forloop.last == false %}, {% endif %}
+                {%- endfor -%}
+            {%- endif -%}
+            {%- if method.parameters and method.parameters.size > 0 -%}, {% endif -%}
             [FromHeader(Name = "Authorization")] string? authorization = null
         )
         {
+            // Base endpoint without query parameters
+            string endpoint = $"/{{ controllername }}/{{ method.route }}";
+            
+            // Build query string from parameters of type string only
+            string query = "";
+            {%- for param in method.parameters -%}
+                {%- if param.type == "string" -%}
+            query += "{{ param.name }}=" + Uri.EscapeDataString({{ param.name }}) + "&";
+                {%- endif -%}
+            {%- endfor -%}
+            if(query.Length > 0)
+            {
+                query = query.TrimEnd('&');
+                endpoint += "?" + query;
+            }
+            
+            // Determine payload: use the first non-string parameter (if any)
+            // (Assumes there is at most one DTO parameter.)
+            {%- assign payloadParam = "" -%}
+            {%- for param in method.parameters -%}
+                {%- if param.type != "string" -%}
+                    {%- assign payloadParam = param.name -%}
+                {%- endif -%}
+            {%- endfor -%}
+            
             var response = await _request.CallEndpointAsync(
                 HttpMethod.Get,
-                "/{{ controllername }}/{{ method.route }}",
+                endpoint,
                 authorization
-                {% if method.hasbody %}, model{% else %}, null{% endif %}
+                {%- if payloadParam != "" -%}, {{ payloadParam }}{%- endif -%}
             );
             return Content(response, JsonContentType);
         }
         {% endfor %}
         {% endif %}
 
+
         {% if putmethods.size > 0 %}
         // PUT Methods
         {% for method in putmethods %}
         [HttpPut("{{ method.route }}")]
         public async Task<IActionResult> {{ method.name }}(
-            {% if method.hasbody %}[FromBody] {{ method.parametertype }} model, {% endif %}
+            {%- if method.hasbody -%}
+                [FromBody] {{ method.parametertype }} model
+            {%- else -%}
+                {%- if method.parameters and method.parameters.size > 0 -%}
+                    {%- for param in method.parameters -%}
+                        {{ param.type }} {{ param.name }}{% if forloop.last == false %}, {% endif %}
+                    {%- endfor -%}
+                {%- endif -%}
+            {%- endif -%}
+            {%- if method.hasbody or (method.parameters and method.parameters.size > 0) -%}, {% endif -%}
             [FromHeader(Name = "Authorization")] string? authorization = null
         )
         {
@@ -48,7 +88,10 @@ namespace {{ namespace }}.Controllers
                 HttpMethod.Put,
                 "/{{ controllername }}/{{ method.route }}",
                 authorization
-                {% if method.hasbody %}, model{% else %}, null{% endif %}
+                {%- if method.hasbody -%}, model
+                {%- else -%}
+                    {%- for param in method.parameters -%}, {{ param.name }}{%- endfor -%}
+                {%- endif -%}
             );
             return Content(response, JsonContentType);
         }
@@ -60,7 +103,16 @@ namespace {{ namespace }}.Controllers
         {% for method in postmethods %}
         [HttpPost("{{ method.route }}")]
         public async Task<IActionResult> {{ method.name }}(
-            {% if method.hasbody %}[FromBody] {{ method.parametertype }} model, {% endif %}
+            {%- if method.hasbody -%}
+                [FromBody] {{ method.parametertype }} model
+            {%- else -%}
+                {%- if method.parameters and method.parameters.size > 0 -%}
+                    {%- for param in method.parameters -%}
+                        {{ param.type }} {{ param.name }}{% if forloop.last == false %}, {% endif %}
+                    {%- endfor -%}
+                {%- endif -%}
+            {%- endif -%}
+            {%- if method.hasbody or (method.parameters and method.parameters.size > 0) -%}, {% endif -%}
             [FromHeader(Name = "Authorization")] string? authorization = null
         )
         {
@@ -68,7 +120,10 @@ namespace {{ namespace }}.Controllers
                 HttpMethod.Post,
                 "/{{ controllername }}/{{ method.route }}",
                 authorization
-                {% if method.hasbody %}, model{% else %}, null{% endif %}
+                {%- if method.hasbody -%}, model
+                {%- else -%}
+                    {%- for param in method.parameters -%}, {{ param.name }}{%- endfor -%}
+                {%- endif -%}
             );
             return Content(response, JsonContentType);
         }

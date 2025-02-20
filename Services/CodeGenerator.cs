@@ -102,6 +102,16 @@ namespace ParentApiGenerator.Services
                         {
                             { "route", dm.Route ?? string.Empty },
                             { "name", dm.Name ?? string.Empty },
+                            {
+                                "parameters",
+                                dm
+                                    .Parameters.Select(p => new Dictionary<string, object>
+                                    {
+                                        { "type", p.Type ?? string.Empty },
+                                        { "name", p.Name ?? string.Empty },
+                                    })
+                                    .ToList()
+                            },
                         })
                         .ToList(),
                 };

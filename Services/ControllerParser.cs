@@ -25,7 +25,10 @@ namespace ParentApiGenerator.Services
             {
                 string fullControllerName = controller.Identifier.Text;
                 string simpleControllerName = fullControllerName.EndsWith("Controller")
-                    ? fullControllerName.Substring(0, fullControllerName.Length - "Controller".Length)
+                    ? fullControllerName.Substring(
+                        0,
+                        fullControllerName.Length - "Controller".Length
+                    )
                     : fullControllerName;
 
                 var controllerModel = new Controller { ControllerName = simpleControllerName };
@@ -44,7 +47,6 @@ namespace ParentApiGenerator.Services
             Controller controllerModel
         )
         {
-            // Retrieve methods with HTTP verb attributes (GET, POST, PUT, DELETE)
             var methods = controller
                 .Members.OfType<MethodDeclarationSyntax>()
                 .Where(m =>
@@ -54,7 +56,6 @@ namespace ParentApiGenerator.Services
 
             foreach (var method in methods)
             {
-                // Get the HTTP verb and route from the method's attributes
                 var httpAttr = method
                     .AttributeLists.SelectMany(a => a.Attributes)
                     .FirstOrDefault(attr => attr.Name.ToString().StartsWith("Http"));
@@ -62,62 +63,76 @@ namespace ParentApiGenerator.Services
                 string methodName = method.Identifier.Text;
                 string httpVerb =
                     httpAttr?.Name.ToString().Replace("Attribute", "").Replace("Http", "") ?? "";
+                // Get route from Http* attribute, if present.
                 string route =
                     httpAttr?.ArgumentList?.Arguments.FirstOrDefault()?.ToString().Trim('"') ?? "";
 
-                // Check if the method has a body parameter (using [FromBody])
+                // If route is still empty, try to get it from a separate [Route] attribute.
+                if (string.IsNullOrEmpty(route))
+                {
+                    var routeAttr = method
+                        .AttributeLists.SelectMany(a => a.Attributes)
+                        .FirstOrDefault(attr => attr.Name.ToString().Contains("Route"));
+                    route =
+                        routeAttr?.ArgumentList?.Arguments.FirstOrDefault()?.ToString().Trim('"')
+                        ?? "";
+                }
+
+                // Detect [FromBody] and [FromForm]
                 bool hasBody = method.ParameterList.Parameters.Any(p =>
-                    p.AttributeLists.Any(attr => attr.ToString().Contains("FromBody"))
+                    p.AttributeLists.Any(attr =>
+                        attr.ToString().Contains("FromBody") || attr.ToString().Contains("FromForm")
+                    )
+                );
+                bool hasForm = method.ParameterList.Parameters.Any(p =>
+                    p.AttributeLists.Any(attr => attr.ToString().Contains("FromForm"))
                 );
 
-                // Extract the parameter type for the body, if applicable
                 string parameterType = "";
-                if (hasBody)
+                if (hasBody || hasForm)
                 {
                     var bodyParam = method.ParameterList.Parameters.FirstOrDefault(p =>
-                        p.AttributeLists.Any(attr => attr.ToString().Contains("FromBody"))
+                        p.AttributeLists.Any(attr =>
+                            attr.ToString().Contains("FromBody")
+                            || attr.ToString().Contains("FromForm")
+                        )
                     );
                     parameterType = bodyParam?.Type?.ToString() ?? string.Empty;
                 }
 
-                // Extract non-body parameters
-                var nonBodyParameters = method.ParameterList.Parameters
-                    .Where(p => !p.AttributeLists.Any(attr => attr.ToString().Contains("FromBody")))
+                var nonBodyParameters = method
+                    .ParameterList.Parameters.Where(p =>
+                        !p.AttributeLists.Any(attr =>
+                            attr.ToString().Contains("FromBody")
+                            || attr.ToString().Contains("FromForm")
+                        )
+                    )
                     .Select(p => new Parameter
                     {
                         Type = p.Type?.ToString() ?? string.Empty,
-                        Name = p.Identifier.ToString()
+                        Name = p.Identifier.ToString(),
                     })
                     .ToList();
 
-                // Create a method object and add it to the corresponding HTTP verb list in the controller
                 var methodObj = new Method
                 {
                     Name = methodName,
                     HttpVerb = httpVerb,
                     Route = route,
                     HasBody = hasBody,
+                    HasForm = hasForm, // Add a new property in the Method model
                     ParameterType = parameterType,
-                    Parameters = nonBodyParameters
+                    Parameters = nonBodyParameters,
                 };
 
-                // Group methods by HTTP verb (Get, Put, Post, Delete)
                 if (httpVerb == "Get")
-                {
                     controllerModel.GetMethods.Add(methodObj);
-                }
                 else if (httpVerb == "Put")
-                {
                     controllerModel.PutMethods.Add(methodObj);
-                }
                 else if (httpVerb == "Post")
-                {
                     controllerModel.PostMethods.Add(methodObj);
-                }
                 else if (httpVerb == "Delete")
-                {
                     controllerModel.DeleteMethods.Add(methodObj);
-                }
             }
         }
     }

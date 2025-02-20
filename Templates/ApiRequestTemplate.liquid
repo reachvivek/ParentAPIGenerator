@@ -1,5 +1,8 @@
+using System.Net.Http.Headers;
+using Microsoft.AspNetCore.Mvc;
 using System.Text;
 using Newtonsoft.Json;
+using TicketingToolParentAPI.Models;
 
 namespace {{ Namespace }}.Utility
 {
@@ -12,74 +15,85 @@ namespace {{ Namespace }}.Utility
             _httpClient = httpClient;
         }
 
-        private static Dictionary<string, string> PrepareHeaders(
+        private static void AddHeaders(
+            HttpRequestMessage requestMessage,
             string? authorization,
             IDictionary<string, string>? extraHeaders = null
         )
         {
-            var headers = new Dictionary<string, string>();
-
             if (!string.IsNullOrWhiteSpace(authorization))
             {
-                headers["Authorization"] = authorization;
+                // Check if "Bearer " is already present
+                string token = authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+                    ? authorization.Substring(7) // Remove existing "Bearer " prefix
+                    : authorization;
+
+                requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             }
 
             if (extraHeaders != null)
             {
                 foreach (var header in extraHeaders)
                 {
-                    headers[header.Key] = header.Value;
+                    requestMessage.Headers.TryAddWithoutValidation(header.Key, header.Value);
                 }
             }
-
-            return headers;
         }
 
-        private async Task<HttpResponseMessage> MakeApiRequestAsync(
-            HttpMethod method,
-            string url,
-            string? authorization = null,
-            object? payload = null,
-            bool isMultipart = false
-        )
+
+        private async Task<(int, string)> SendRequestAsync(HttpMethod method, string url, string? authorization = null, object? payload = null)
         {
-            if (!Uri.IsWellFormedUriString(url, UriKind.Absolute))
+            if (!Uri.IsWellFormedUriString(url, UriKind.Absolute) && _httpClient.BaseAddress != null)
             {
-                if (_httpClient.BaseAddress == null)
-                {
-                    throw new InvalidOperationException("BaseAddress is not set on the HttpClient.");
-                }
                 url = new Uri(_httpClient.BaseAddress, url).ToString();
             }
-
-            var requestMessage = new HttpRequestMessage(method, url);
-            var headers = PrepareHeaders(authorization);
-
-            foreach (var header in headers)
+            else if (!Uri.IsWellFormedUriString(url, UriKind.Absolute))
             {
-                requestMessage.Headers.Add(header.Key, header.Value);
+                throw new InvalidOperationException("Invalid URL and BaseAddress is not set on HttpClient.");
             }
 
-            if (payload != null && !isMultipart)
+            using var requestMessage = new HttpRequestMessage(method, url);
+            AddHeaders(requestMessage, authorization);
+
+            if (payload is FileData fileData && fileData.Files != null)
             {
-                var json = JsonConvert.SerializeObject(payload);
+                var formData = new MultipartFormDataContent();
+                
+                foreach (var file in fileData.Files)
+                {
+                    var stream = file.OpenReadStream();
+                    var fileContent = new StreamContent(stream);
+                    fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+                    formData.Add(fileContent, "Files", file.FileName);
+                }
+
+                formData.Add(new StringContent(fileData.FileType ?? ""), "FileType");
+                formData.Add(new StringContent(fileData.Category ?? ""), "Category");
+                formData.Add(new StringContent(fileData.roleId.ToString()), "roleId");
+
+                requestMessage.Content = formData;
+            }
+            else if (payload != null)
+            {
+                string json = JsonConvert.SerializeObject(payload);
                 requestMessage.Content = new StringContent(json, Encoding.UTF8, "application/json");
             }
 
             var response = await _httpClient.SendAsync(requestMessage);
-            response.EnsureSuccessStatusCode();
-            return response;
+            var responseContent = await response.Content.ReadAsStringAsync();
+            return ((int)response.StatusCode, responseContent);
         }
 
-        public async Task<string> CallEndpointAsync(
-            HttpMethod method,
-            string url,
-            string? authorization = null,
-            object? payload = null
-        )
+        public async Task<ContentResult> CallEndpointAsync(HttpMethod method, string url, string? authorization = null, object? payload = null)
         {
-            var httpResponse = await MakeApiRequestAsync(method, url, authorization, payload);
-            return await httpResponse.Content.ReadAsStringAsync();
+            var (statusCode, response) = await SendRequestAsync(method, url, authorization, payload);
+
+            return new ContentResult
+            {
+                StatusCode = statusCode,
+                Content = response,
+                ContentType = "application/json"
+            };
         }
     }
 }

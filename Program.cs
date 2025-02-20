@@ -8,9 +8,7 @@ namespace ParentApiGenerator
     {
         static async Task Main(string[] args)
         {
-            var (inputFolder, outputFolder, parentNamespace) = await UserInputHandler.GetUserInput(
-                args
-            );
+            var (inputFolder, outputFolder, parentNamespace) = await UserInputHandler.GetUserInput(args);
 
             Console.WriteLine($"Input Folder: {inputFolder}");
             Console.WriteLine($"Output Folder: {outputFolder}");
@@ -20,17 +18,14 @@ namespace ParentApiGenerator
             await ProjectInitializer.InitializeProject(outputFolder, parentNamespace);
 
             // Generate Controllers
-            await ControllerGenerator.GenerateControllers(
-                inputFolder,
-                outputFolder,
-                parentNamespace
-            );
+            await ControllerGenerator.GenerateControllers(inputFolder, outputFolder, parentNamespace);
 
             // Generate ApiRequest File
             await ApiRequestGenerator.GenerateApiRequestFile(outputFolder, parentNamespace);
 
             // Register DI in Program.cs
-            await ProgramFileHandler.RegisterApiRequestInProgramCs(outputFolder);
+            var programFileHandler = new ProgramFileHandler();
+            await programFileHandler.EnsureProgramCsExists(outputFolder, parentNamespace);
 
             // Finalize appsettings.json
             await AppSettingsHandler.UpdateAppSettingsJson(outputFolder);

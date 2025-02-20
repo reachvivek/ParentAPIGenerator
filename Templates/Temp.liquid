@@ -88,7 +88,7 @@ namespace {{ namespace }}.Controllers
             [FromHeader(Name = "Authorization")] string? authorization = null
         )
         {
-            return await _request.CallEndpointAsync(HttpMethod.Post, "/{{ controllername }}/{{ method.route }}", authorization{%- if method.hasbody -%}, model
+            return await _request.CallEndpointAsync(HttpMethod.Put, "/{{ controllername }}/{{ method.route }}", authorization{%- if method.hasbody -%}, model
                 {%- else -%}
                     {%- for param in method.parameters -%}, {{ param.name }}{%- endfor -%}
                 {%- endif -%});
@@ -101,25 +101,10 @@ namespace {{ namespace }}.Controllers
         {% for method in deletemethods %}
         [HttpDelete("{{ method.route }}")]
         public async Task<IActionResult> {{ method.name }}(
-            {%- for param in method.parameters -%}
-                [FromQuery] {{ param.type }} {{ param.name }}{% if forloop.last == false %}, {% endif %}
-            {%- endfor -%}
-            {%- if method.parameters.size > 0 -%}, {% endif %}
             [FromHeader(Name = "Authorization")] string? authorization = null
         )
         {
-            string endpoint = "/{{ controllername }}/{{ method.route }}";
-            string query = "";
-            {%- for param in method.parameters -%}
-                {%- if param.type == "string" -%}
-            query += "{{ param.name }}=" + Uri.EscapeDataString({{ param.name }}) + "&";
-                {%- endif -%}
-            {%- endfor -%}
-            if(query.Length > 0)
-            {
-                endpoint += "?" + query.TrimEnd('&');
-            }
-            return await _request.CallEndpointAsync(HttpMethod.Delete, endpoint, authorization);
+            return await _request.CallEndpointAsync(HttpMethod.Delete, "/{{ controllername }}/{{ method.route }}", authorization);
         }
         {% endfor %}
         {% endif %}

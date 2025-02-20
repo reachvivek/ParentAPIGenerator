@@ -1,0 +1,47 @@
+using {{namespace}}.Utility;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(
+        "AllowAllPolicy",
+        policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()
+    );
+});
+
+builder.Services.AddHttpClient<ApiRequest>(client =>
+{
+    var baseUrl = builder.Configuration["API:BaseURL"];
+    if (string.IsNullOrEmpty(baseUrl))
+    {
+        throw new InvalidOperationException("Base URL cannot be null or empty.");
+    }
+    client.BaseAddress = new Uri(baseUrl);
+});
+
+builder.Services.AddControllers();
+
+var app = builder.Build();
+
+app.UseRouting();
+app.UseCors("AllowAllPolicy");
+app.UseAuthorization();
+
+app.MapGet(
+    "/",
+    () =>
+        Results.Ok(
+            new
+            {
+                message = "Welcome to the {{namespace}} API", 
+                description = "This API provides access to the {{namespace}} services.", 
+                status = "Operational",
+                documentation = "For API details, contact your system administrator."
+            }
+        )
+);
+
+app.MapControllers();
+
+await app.RunAsync();

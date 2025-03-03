@@ -29,9 +29,7 @@ namespace {{ namespace }}.Controllers
             string endpoint = $"/{{ controllername }}/{{ method.route }}";
             string query = "";
             {%- for param in method.parameters -%}
-                {%- if param.type == "string" -%}
-            query += "{{ param.name }}=" + Uri.EscapeDataString({{ param.name }}) + "&";
-                {%- endif -%}
+            query += "{{ param.name }}=" + Uri.EscapeDataString({{ param.name }}.ToString()) + "&";
             {%- endfor -%}
             if (query.Length > 0)
             {
